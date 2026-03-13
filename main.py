@@ -70,19 +70,9 @@ async def on_ready():
     if not bot.synced_once:
         total = 0
 
-        # Alte globale Commands einmal löschen
-        bot.tree.clear_commands(guild=None)
-        await bot.tree.sync()
-
         for guild in bot.guilds:
             try:
-                # Alte Guild-Commands leeren
-                bot.tree.clear_commands(guild=guild)
-
-                # Aktuelle Commands in die Guild kopieren
                 bot.tree.copy_global_to(guild=guild)
-
-                # Guild syncen
                 synced = await bot.tree.sync(guild=guild)
 
                 print(
