@@ -1,6 +1,8 @@
 import os
+import sys
 import logging
 import asyncio
+import traceback
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -13,11 +15,17 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-handler = logging.FileHandler(
-    filename="discord.log",
-    encoding="utf-8",
-    mode="w"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("discord.log", encoding="utf-8", mode="w")
+    ],
+    force=True
 )
+
+logger = logging.getLogger("socialbot")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -38,32 +46,48 @@ class SocialBot(commands.Bot):
 
     async def setup_hook(self):
         try:
-            print("Verbinde mit der Datenbank...")
+            logger.info("setup_hook gestartet")
+            logger.info("Verbinde mit der Datenbank...")
             await self.db.connect()
-            await self.db.create_tables()
-            print("Datenbank-Tabellen gecheckt!")
+            logger.info("DB verbunden")
 
-            print("Lade Cogs...")
+            await self.db.create_tables()
+            logger.info("Datenbank-Tabellen gecheckt")
+
+            logger.info("Lade Cogs...")
             await self.load_extension("cogs.accounts")
             await self.load_extension("cogs.posts")
             await self.load_extension("cogs.help")
-            print("Cogs geladen!")
+            logger.info("Cogs geladen")
 
             for cmd in self.tree.get_commands():
-                print(f"LOKALER COMMAND: /{cmd.name}")
-                print("PARAMETER:", [p.name for p in cmd.parameters])
+                logger.info(f"LOKALER COMMAND: /{cmd.name}")
+                logger.info(f"PARAMETER: {[p.name for p in cmd.parameters]}")
 
         except Exception:
-            import traceback
-            print("FEHLER in setup_hook():")
-            traceback.print_exc()
+            logger.exception("FEHLER in setup_hook")
             raise
+
+    async def close(self):
+        logger.info("Schließe Bot und Datenbank...")
+        try:
+            await self.db.close()
+        except Exception:
+            logger.exception("Fehler beim Schließen der Datenbank")
+        await super().close()
+
 
 bot = SocialBot()
 
+
+@bot.event
+async def on_connect():
+    logger.info("Mit Discord verbunden (on_connect)")
+
 @bot.event
 async def on_ready():
-    print(f"Eingeloggt als {bot.user} (ID: {bot.user.id})")
+    logger.info(f"Eingeloggt als {bot.user} (ID: {bot.user.id})")
+    logger.info(f"Guilds: {[f'{g.name} ({g.id})' for g in bot.guilds]}")
 
     if not bot.synced_once:
         synced_total = 0
@@ -71,12 +95,12 @@ async def on_ready():
         for guild in bot.guilds:
             try:
                 synced = await bot.tree.sync(guild=guild)
-                print(f"{len(synced)} Commands für Guild '{guild.name}' ({guild.id}) synchronisiert.")
+                logger.info(f"{len(synced)} Commands für Guild '{guild.name}' ({guild.id}) synchronisiert")
                 synced_total += len(synced)
-            except Exception as e:
-                print(f"Fehler beim Sync für Guild '{guild.name}' ({guild.id}): {e}")
+            except Exception:
+                logger.exception(f"Fehler beim Sync für Guild '{guild.name}' ({guild.id})")
 
-        print(f"Guild-Sync abgeschlossen. Insgesamt synchronisierte Commands: {synced_total}")
+        logger.info(f"Guild-Sync abgeschlossen. Insgesamt synchronisierte Commands: {synced_total}")
         bot.synced_once = True
 
 
@@ -106,30 +130,37 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 
 
 async def main():
-    print("Starte den Bot-Prozess...")
+    logger.info("Starte den Bot-Prozess...")
 
     if not TOKEN:
-        print("FEHLER: Kein DISCORD_TOKEN gefunden!")
+        logger.error("Kein DISCORD_TOKEN gefunden")
         return
 
     if not DATABASE_URL:
-        print("FEHLER: Kein DATABASE_URL gefunden!")
+        logger.error("Kein DATABASE_URL gefunden")
         return
 
-    print("Starte Webserver...")
+    logger.info(f"TOKEN vorhanden: {TOKEN[:8]}...")
+    logger.info(f"DATABASE_URL vorhanden: {DATABASE_URL[:30]}...")
+
+    logger.info("Starte Webserver...")
     webserver.keep_alive()
 
     try:
-        print("Versuche Login bei Discord...")
+        logger.info("Versuche Login bei Discord...")
         await bot.start(TOKEN, reconnect=True)
     except KeyboardInterrupt:
-        print("Bot wird beendet...")
-    except Exception as e:
-        print(f"Fehler beim Starten des Bots: {e}")
+        logger.info("Bot wird beendet...")
+    except Exception:
+        logger.exception("Fehler beim Starten des Bots")
     finally:
         if not bot.is_closed():
             await bot.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception:
+        traceback.print_exc()
+        raise
