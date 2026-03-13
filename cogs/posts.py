@@ -46,23 +46,27 @@ class PostsCog(commands.Cog):
             )
             return
 
-        image_url = bild.url if bild else None
-
         embed = discord.Embed(
             description=f"**{account['name']}**\n\n**{titel}**\n{body}",
             color=discord.Color.from_rgb(245, 245, 245)
         )
-
         embed.set_thumbnail(url=account["avatar_url"])
-
         embed.set_footer(text=f"Erstellt von {interaction.user.display_name}")
 
-        if image_url:
-            embed.set_image(url=image_url)
+        file_to_send = None
+        image_url_for_db = None
 
-        await interaction.response.send_message(embed=embed)
+        if bild:
+            file_to_send = await bild.to_file()
+            embed.set_image(url=f"attachment://{file_to_send.filename}")
+            image_url_for_db = bild.url
+
+        if file_to_send:
+            await interaction.response.send_message(embed=embed, file=file_to_send)
+        else:
+            await interaction.response.send_message(embed=embed)
+
         msg = await interaction.original_response()
-
         await msg.add_reaction("❤️")
 
         await self.bot.db.create_post(
@@ -72,7 +76,7 @@ class PostsCog(commands.Cog):
             channel_id=interaction.channel.id,
             message_id=msg.id,
             title=titel,
-            image_url=image_url
+            image_url=image_url_for_db
         )
 
 
