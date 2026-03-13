@@ -46,10 +46,6 @@ class SocialBot(commands.Bot):
             await self.load_extension("cogs.help")
             print("Cogs geladen", flush=True)
 
-            print("Synchronisiere Commands...", flush=True)
-            synced = await self.tree.sync()
-            print(f"{len(synced)} globale Commands synchronisiert", flush=True)
-
         except Exception:
             print("FEHLER in setup_hook()", flush=True)
             traceback.print_exc()
@@ -59,7 +55,6 @@ class SocialBot(commands.Bot):
         try:
             await self.db.close()
         except Exception:
-            webserver.STATUS["last_error"] = traceback.format_exc()
             traceback.print_exc()
         await super().close()
 
@@ -69,7 +64,37 @@ bot = SocialBot()
 
 @bot.event
 async def on_ready():
-    print(f"Eingeloggt als {bot.user}", flush=True)
+    print(f"Eingeloggt als {bot.user} ({bot.user.id})", flush=True)
+    print(f"Guilds: {[f'{g.name} ({g.id})' for g in bot.guilds]}", flush=True)
+
+    if not bot.synced_once:
+        total = 0
+        for guild in bot.guilds:
+            try:
+                synced = await bot.tree.sync(guild=guild)
+                print(
+                    f"{len(synced)} Commands für Guild '{guild.name}' ({guild.id}) synchronisiert.",
+                    flush=True
+                )
+                total += len(synced)
+            except Exception:
+                print(f"Fehler beim Sync für Guild '{guild.name}' ({guild.id})", flush=True)
+                traceback.print_exc()
+
+        print(f"Guild-Sync abgeschlossen. Insgesamt synchronisierte Commands: {total}", flush=True)
+        bot.synced_once = True
+
+
+@bot.command(name="ping")
+async def ping(ctx: commands.Context):
+    await ctx.send("pong")
+
+
+@bot.command(name="help")
+async def prefix_help(ctx: commands.Context):
+    await ctx.send(
+        "Nutze die Slash-Commands: `/createaccount`, `/selectaccount`, `/createpost`, `/accounts`, `/myaccounts`, `/deleteaccount`, `/help`"
+    )
 
 
 @bot.event
@@ -85,6 +110,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
         user_id=payload.user_id
     )
 
+
 @bot.event
 async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
     if str(payload.emoji) != "❤️":
@@ -99,17 +125,11 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 async def main():
     print("Starte den Bot-Prozess...", flush=True)
 
-    webserver.STATUS["main_started"] = True
-    webserver.STATUS["token_present"] = bool(TOKEN)
-    webserver.STATUS["database_url_present"] = bool(DATABASE_URL)
-
     if not TOKEN:
-        webserver.STATUS["last_error"] = "Kein DISCORD_TOKEN gefunden"
         print("FEHLER: Kein DISCORD_TOKEN gefunden", flush=True)
         return
 
     if not DATABASE_URL:
-        webserver.STATUS["last_error"] = "Kein DATABASE_URL gefunden"
         print("FEHLER: Kein DATABASE_URL gefunden", flush=True)
         return
 
@@ -122,7 +142,6 @@ async def main():
     except KeyboardInterrupt:
         print("Bot wird beendet...", flush=True)
     except Exception:
-        webserver.STATUS["last_error"] = traceback.format_exc()
         print("Fehler beim Starten des Bots:", flush=True)
         traceback.print_exc()
     finally:
