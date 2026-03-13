@@ -6,7 +6,6 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from services.database import Database
-import webserver
 
 load_dotenv()
 
@@ -93,7 +92,7 @@ async def ping(ctx: commands.Context):
 @bot.command(name="help")
 async def prefix_help(ctx: commands.Context):
     await ctx.send(
-        "Nutze die Slash-Commands: `/createaccount`, `/selectaccount`, `/createpost`, `/accounts`, `/myaccounts`, `/deleteaccount`, `/help`"
+        "Slash-Commands: /createaccount, /selectaccount, /createpost, /accounts, /myaccounts, /deleteaccount, /help"
     )
 
 
@@ -132,9 +131,6 @@ async def main():
     if not DATABASE_URL:
         print("FEHLER: Kein DATABASE_URL gefunden", flush=True)
         return
-
-    print("Starte Webserver...", flush=True)
-    webserver.keep_alive()
 
     try:
         print("Versuche Login bei Discord...", flush=True)
