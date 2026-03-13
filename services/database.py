@@ -18,7 +18,7 @@ class Database:
         self.pool = await asyncpg.create_pool(
             dsn=fixed_dsn,
             min_size=1,
-            max_size=3,
+            max_size=1,
             command_timeout=60
         )
 

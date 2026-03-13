@@ -37,29 +37,29 @@ class SocialBot(commands.Bot):
         self.synced_once = False
 
     async def setup_hook(self):
-        print("Verbinde mit der Datenbank...")
-        await self.db.connect()
-        await self.db.create_tables()
-        print("Datenbank-Tabellen gecheckt!")
+        try:
+            print("Verbinde mit der Datenbank...")
+            await self.db.connect()
+            await self.db.create_tables()
+            print("Datenbank-Tabellen gecheckt!")
 
-        print("Lade Cogs...")
-        await self.load_extension("cogs.accounts")
-        await self.load_extension("cogs.posts")
-        await self.load_extension("cogs.help")
-        print("Cogs geladen!")
+            print("Lade Cogs...")
+            await self.load_extension("cogs.accounts")
+            await self.load_extension("cogs.posts")
+            await self.load_extension("cogs.help")
+            print("Cogs geladen!")
 
-        for cmd in self.tree.get_commands():
-            print(f"LOKALER COMMAND: /{cmd.name}")
-            print("PARAMETER:", [p.name for p in cmd.parameters])
+            for cmd in self.tree.get_commands():
+                print(f"LOKALER COMMAND: /{cmd.name}")
+                print("PARAMETER:", [p.name for p in cmd.parameters])
 
-    async def close(self):
-        print("Schließe Bot und Datenbank...")
-        await self.db.close()
-        await super().close()
-
+        except Exception:
+            import traceback
+            print("FEHLER in setup_hook():")
+            traceback.print_exc()
+            raise
 
 bot = SocialBot()
-
 
 @bot.event
 async def on_ready():
