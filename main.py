@@ -6,6 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from services.database import Database
+import webserver
 
 load_dotenv()
 
@@ -68,14 +69,18 @@ async def on_ready():
 
     if not bot.synced_once:
         total = 0
+
         for guild in bot.guilds:
             try:
+                bot.tree.copy_global_to(guild=guild)
                 synced = await bot.tree.sync(guild=guild)
+
                 print(
                     f"{len(synced)} Commands für Guild '{guild.name}' ({guild.id}) synchronisiert.",
                     flush=True
                 )
                 total += len(synced)
+
             except Exception:
                 print(f"Fehler beim Sync für Guild '{guild.name}' ({guild.id})", flush=True)
                 traceback.print_exc()
@@ -131,6 +136,9 @@ async def main():
     if not DATABASE_URL:
         print("FEHLER: Kein DATABASE_URL gefunden", flush=True)
         return
+
+    print("Starte Webserver...", flush=True)
+    webserver.keep_alive()
 
     try:
         print("Versuche Login bei Discord...", flush=True)
