@@ -68,6 +68,7 @@ class PostsCog(commands.Cog):
 
         msg = await interaction.original_response()
         await msg.add_reaction("❤️")
+        await msg.add_reaction("💔")
 
         await self.bot.db.create_post(
             guild_id=interaction.guild.id,

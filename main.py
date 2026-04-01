@@ -106,24 +106,34 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     if payload.user_id == bot.user.id:
         return
 
-    if str(payload.emoji) != "❤️":
-        return
+    emoji = str(payload.emoji)
 
-    await bot.db.like_post(
-        message_id=payload.message_id,
-        user_id=payload.user_id
-    )
+    if emoji == "❤️":
+        await bot.db.like_post(
+            message_id=payload.message_id,
+            user_id=payload.user_id
+        )
+    elif emoji == "💔":
+        await bot.db.dislike_post(
+            message_id=payload.message_id,
+            user_id=payload.user_id
+        )
 
 
 @bot.event
 async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
-    if str(payload.emoji) != "❤️":
-        return
+    emoji = str(payload.emoji)
 
-    await bot.db.unlike_post(
-        message_id=payload.message_id,
-        user_id=payload.user_id
-    )
+    if emoji == "❤️":
+        await bot.db.unlike_post(
+            message_id=payload.message_id,
+            user_id=payload.user_id
+        )
+    elif emoji == "💔":
+        await bot.db.undislike_post(
+            message_id=payload.message_id,
+            user_id=payload.user_id
+        )
 
 
 async def main():

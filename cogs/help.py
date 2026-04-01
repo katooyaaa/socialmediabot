@@ -28,27 +28,25 @@ class HelpCog(commands.Cog):
 
         embed.add_field(
             name="/createpost <titel> <body> [bild]",
-            value=(
-                "Erstellt einen Post mit deinem ausgewählten Account.\n"
-            ),
+            value="Erstellt einen Post mit deinem ausgewählten Account. Posts können geliked und disliked werden.",
             inline=False
         )
 
         embed.add_field(
             name="/accounts",
-            value="Zeigt alle Accounts auf dem Server inklusive Inhaber und gesamten Likes.",
+            value="Zeigt alle Accounts auf dem Server inklusive Inhaber, gesamten Likes und gesamten Dislikes.",
             inline=False
         )
 
         embed.add_field(
             name="/myaccounts",
-            value="Zeigt nur deine eigenen Accounts inklusive gesamter Likes.",
+            value="Zeigt nur deine eigenen Accounts inklusive gesamter Likes und Dislikes.",
             inline=False
         )
 
         embed.add_field(
             name="/deleteaccount <name>",
-            value="Löscht einen deiner Accounts samt aller Posts und Likes.",
+            value="Löscht einen deiner Accounts samt aller Posts, Likes und Dislikes.",
             inline=False
         )
 

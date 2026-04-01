@@ -71,6 +71,15 @@ class Database:
                 );
             """)
 
+            # NEU: Dislikes
+            await con.execute("""
+                CREATE TABLE IF NOT EXISTS post_dislikes (
+                    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                    user_id BIGINT NOT NULL,
+                    PRIMARY KEY (post_id, user_id)
+                );
+            """)
+
     async def create_account(self, guild_id: int, owner_id: int, name: str, avatar_url: str):
         async with self.pool.acquire() as con:
             return await con.fetchrow("""
@@ -94,10 +103,12 @@ class Database:
                     a.name,
                     a.owner_id,
                     a.avatar_url,
-                    COUNT(pl.user_id)::INT AS likes
+                    COUNT(DISTINCT pl.user_id)::INT AS likes,
+                    COUNT(DISTINCT pd.user_id)::INT AS dislikes
                 FROM accounts a
                 LEFT JOIN posts p ON p.account_id = a.id
                 LEFT JOIN post_likes pl ON pl.post_id = p.id
+                LEFT JOIN post_dislikes pd ON pd.post_id = p.id
                 WHERE a.guild_id = $1
                 GROUP BY a.id
                 ORDER BY likes DESC, a.name ASC;
@@ -111,10 +122,12 @@ class Database:
                     a.name,
                     a.owner_id,
                     a.avatar_url,
-                    COUNT(pl.user_id)::INT AS likes
+                    COUNT(DISTINCT pl.user_id)::INT AS likes,
+                    COUNT(DISTINCT pd.user_id)::INT AS dislikes
                 FROM accounts a
                 LEFT JOIN posts p ON p.account_id = a.id
                 LEFT JOIN post_likes pl ON pl.post_id = p.id
+                LEFT JOIN post_dislikes pd ON pd.post_id = p.id
                 WHERE a.guild_id = $1
                   AND a.owner_id = $2
                 GROUP BY a.id
@@ -210,10 +223,48 @@ class Database:
                 WHERE post_id = $1 AND user_id = $2;
             """, post["id"], user_id)
 
+    async def dislike_post(self, message_id: int, user_id: int):
+        async with self.pool.acquire() as con:
+            post = await con.fetchrow("""
+                SELECT id FROM posts WHERE message_id = $1;
+            """, message_id)
+
+            if not post:
+                return
+
+            await con.execute("""
+                INSERT INTO post_dislikes (post_id, user_id)
+                VALUES ($1, $2)
+                ON CONFLICT (post_id, user_id) DO NOTHING;
+            """, post["id"], user_id)
+
+    async def undislike_post(self, message_id: int, user_id: int):
+        async with self.pool.acquire() as con:
+            post = await con.fetchrow("""
+                SELECT id FROM posts WHERE message_id = $1;
+            """, message_id)
+
+            if not post:
+                return
+
+            await con.execute("""
+                DELETE FROM post_dislikes
+                WHERE post_id = $1 AND user_id = $2;
+            """, post["id"], user_id)
+
     async def get_post_like_count(self, post_id: int) -> int:
         async with self.pool.acquire() as con:
             return await con.fetchval("""
                 SELECT COUNT(*)::INT
                 FROM post_likes
+                WHERE post_id = $1;
+            """, post_id) or 0
+
+    # Optional
+    async def get_post_dislike_count(self, post_id: int) -> int:
+        async with self.pool.acquire() as con:
+            return await con.fetchval("""
+                SELECT COUNT(*)::INT
+                FROM post_dislikes
                 WHERE post_id = $1;
             """, post_id) or 0

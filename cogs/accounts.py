@@ -132,7 +132,7 @@ class AccountsCog(commands.Cog):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="accounts", description="Zeigt alle Accounts mit Inhaber und gesamten Likes")
+    @app_commands.command(name="accounts", description="Zeigt alle Accounts mit Inhaber, Likes und Dislikes")
     async def accounts(self, interaction: discord.Interaction):
         if not interaction.guild:
             await interaction.response.send_message(
@@ -157,18 +157,22 @@ class AccountsCog(commands.Cog):
             owner = interaction.guild.get_member(account["owner_id"])
             owner_text = owner.mention if owner else f"`{account['owner_id']}`"
 
+            likes = account.get("likes", 0)
+            dislikes = account.get("dislikes", 0)
+
             embed.add_field(
                 name=account["name"],
                 value=(
                     f"**Inhaber:** {owner_text}\n"
-                    f"**Gesamte Likes:** {account['likes']}"
+                    f"**Gesamte Likes:** {likes}\n"
+                    f"**Gesamte Dislikes:** {dislikes}"
                 ),
                 inline=False
             )
 
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="myaccounts", description="Zeigt nur deine Accounts mit gesamten Likes")
+    @app_commands.command(name="myaccounts", description="Zeigt nur deine Accounts mit Likes und Dislikes")
     async def myaccounts(self, interaction: discord.Interaction):
         if not interaction.guild:
             await interaction.response.send_message(
@@ -193,9 +197,15 @@ class AccountsCog(commands.Cog):
             return
 
         for account in accounts:
+            likes = account.get("likes", 0)
+            dislikes = account.get("dislikes", 0)
+
             embed.add_field(
                 name=account["name"],
-                value=f"**Gesamte Likes:** {account['likes']}",
+                value=(
+                    f"**Gesamte Likes:** {likes}\n"
+                    f"**Gesamte Dislikes:** {dislikes}"
+                ),
                 inline=False
             )
 
